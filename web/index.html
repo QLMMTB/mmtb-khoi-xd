@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quản lý MMTB Khối XD</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .login{max-width:380px;margin:12vh auto 0;display:flex;flex-direction:column;gap:10px}
+  .login input{padding:10px}
+  .err{color:var(--bad);font-size:13px}
+  .loading{padding:40px 0;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top" id="hdr" hidden>
+  <div class="wrap" style="padding-block:0">
+    <div class="bar">
+      <div class="brand"><b>Quản lý MMTB Khối XD</b><span id="me"></span></div>
+      <div class="who">
+        <label class="sm" for="ban">Ban đang xem</label>
+        <select id="ban" aria-label="Ban quản lý"></select>
+        <button class="ghost" id="logout">Đăng xuất</button>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+  </div>
+</header>
+<main class="wrap">
+  <form class="login" id="login" hidden>
+    <h2>Đăng nhập</h2>
+    <p class="sub">Tài khoản do quản trị hệ thống cấp (email công ty).</p>
+    <input id="email" type="email" placeholder="Email" autocomplete="username" required>
+    <input id="pw" type="password" placeholder="Mật khẩu" autocomplete="current-password" required>
+    <button class="primary">Đăng nhập</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+  <section id="view"><div class="loading">Đang tải…</div></section>
+</main>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
