@@ -8,7 +8,7 @@ python tools/seed_from_excel.py --registry "01.11.2026_MMTB_BaoCao_Vinalpha -VHM
 - Loại máy: tên chuẩn hóa theo 'Map MMTB chuẩn hóa' + bảng ghép của REV2; tên chưa ghép giữ nguyên làm 1 loại
   (P.QLTB rà lại trong màn hình Danh mục). Gộp không phân biệt hoa/thường, khoảng trắng.
 - Trạng thái ban đầu: 'Đang sử dụng' → làm việc; 'Sửa chữa' → sửa chữa; 'Lưu kho' → tồn; còn lại → làm việc (ghi chú).
-- Định mức: bộ định mức MẪU (cần P.QLTB thay bằng định mức chính thức).
+- Định mức: nạp riêng bằng tools/seed_dinh_muc.py.
 - --du-an: chỉ nạp máy của các dự án thí điểm (khuyến nghị cho bản test trên đám mây miễn phí).
 """
 import argparse, re, unicodedata, sys
@@ -104,17 +104,7 @@ for _, r in d.iterrows():
 for i in range(0, len(vals), 500):
     L.append("insert into may(ma, loai_id, ten_loai_goc, so_huu, chu_tai_san, don_vi_su_dung, so_khung, so_may, bien_so, ma_sap, ban_id, trang_thai) values\n"
              + ",\n".join(vals[i:i + 500]) + "\non conflict (ma) do nothing;")
-# Định mức MẪU (giống bản mẫu) – thay bằng định mức chính thức
-DM = {'Đào đất': ('m3', [('Máy xúc bánh xích 200', 400, 1), ('Xe ben 16 tấn VC04', 100, 1)]),
-      'Đắp và lu lèn nền': ('m3', [('Máy ủi D5', 800, 1), ('Máy lu rung bánh lốp 12-14 tấn', 700, 1), ('Xe nước 9m3', 1400, 1)]),
-      'Bê tông bơm': ('m3', [('Xe bơm bê tông Cần bơm 62m', 250, 2)]),
-      'Cẩu lắp cấu kiện': ('cấu kiện', [('Máy cẩu bánh lốp chuyên dụng Kato 50-60 tấn', 8, 2), ('Xe cẩu thùng 15 tấn', 12, 1)]),
-      'Đào hố móng nhỏ': ('m3', [('Máy xúc bánh xích 55', 120, 1)])}
-for h, (dv, ms) in DM.items():
-    L.append(f"insert into hang_muc(ten, don_vi) values ({q(h)}, {q(dv)}) on conflict do nothing;")
-    for l, ns, lai in ms:
-        L.append(f"insert into loai_may(ten_chuan) select {q(l)} where not exists (select 1 from loai_may where lower(ten_chuan) = lower({q(l)}));")
-        L.append(f"insert into dinh_muc select h.id, tim_loai({q(l)}), {ns}, {lai} from hang_muc h where h.ten = {q(h)} on conflict do nothing;")
+# Định mức: nạp bằng tools/seed_dinh_muc.py từ file định mức của Khối
 L.append('commit;')
 open(a.out, 'w', encoding='utf-8').write('\n'.join(L) + '\n')
 print(f'{a.out}: {len(ban)} ban, {len(khoi)} khối, {len(loai)} loại máy, {len(alias)} tên ghép, {len(d)} máy; trạng thái: {n_tt}')

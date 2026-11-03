@@ -162,10 +162,16 @@ async function vCapNhat() {
 /* ---------- Nhu cầu theo tiến độ ---------- */
 async function vTienDo() {
   const b = S.viewBan, edit = canEditBan() || isQltb(), M = months(8);
-  const [cv, hm, dm, nc, cung, ntay] = await Promise.all([
-    q(sb.from("cong_viec").select("*").eq("ban_id", b).order("id")), q(sb.from("hang_muc").select("*").order("ten")),
-    q(sb.from("dinh_muc").select("*")), q(sb.from("v_nhu_cau").select("*").eq("ban_id", b).gte("thang", M[0].iso).lte("thang", M.at(-1).iso)),
-    q(sb.from("v_nguon_cung").select("*").eq("ban_id", b)), q(sb.from("nhu_cau_nhap_tay").select("*").eq("ban_id", b))]);
+  const [cv, hm, dm, nc, cung, ntay, tm, chon] = await Promise.all([
+    q(sb.from("cong_viec").select("*").eq("ban_id", b).order("id")), q(sb.from("hang_muc").select("*").order("nhom").order("ten")),
+    q(sb.from("dinh_muc").select("*").order("hang_muc_id")), q(sb.from("v_nhu_cau").select("*").eq("ban_id", b).gte("thang", M[0].iso).lte("thang", M.at(-1).iso)),
+    q(sb.from("v_nguon_cung").select("*").eq("ban_id", b)), q(sb.from("nhu_cau_nhap_tay").select("*").eq("ban_id", b)), q(sb.from("dinh_muc_theo_may").select("*")),
+    q(sb.from("cong_viec_chon").select("*"))]);
+  const KIEU = { nang_suat: "Năng suất/ca", ca_tren_dv: "Ca máy/đơn vị", dv_tren_bo: "Đơn vị/bộ máy", theo_may: "Đi kèm máy khác" };
+  const nhomCua = hid => { const g = {}; dm.filter(d => d.hang_muc_id === hid && d.nhom_thay_the).forEach(d => (g[d.nhom_thay_the] ||= []).push(d)); return g; };
+  const chonSel = c => Object.entries(nhomCua(c.hang_muc_id)).map(([g, lst]) => { const cur = chon.find(x => x.cong_viec_id === c.id && x.nhom_thay_the === g)?.loai_id ?? lst.find(d => d.mac_dinh)?.loai_id;
+    return edit ? `<label class="sm" style="display:block">${esc(g)}<select class="chon" id="ch-${c.id}-${esc(g)}" data-cv="${c.id}" data-g="${esc(g)}">${lst.map(d => `<option value="${d.loai_id}" ${d.loai_id === cur ? "selected" : ""}>${esc(loaiTen(d.loai_id))}</option>`).join("")}</select></label>`
+      : `<div class="sm">${esc(g)}: ${esc(loaiTen(cur))}</div>`; }).join("") || `<span class="muted">–</span>`;
   const hmMap = Object.fromEntries(hm.map(h => [h.id, h]));
   const byLoai = {}; nc.forEach(r => { (byLoai[r.loai_id] ||= Array(M.length).fill(0))[M.findIndex(m => m.iso === r.thang)] += +r.so_may; });
   const co = Object.fromEntries(cung.map(r => [r.loai_id, r.csh + r.thue]));
@@ -173,16 +179,16 @@ async function vTienDo() {
   const banRow = S.banMap[b];
   $("#view").innerHTML = `
   <h2>Nhu cầu MMTB theo tiến độ – ${esc(banTen(b))}</h2>
-  <p class="sub">Số máy/tháng = khối lượng tháng ÷ (năng suất máy/ca × số ca/tháng × hệ số ca), làm tròn lên. Máy đặc thù không tính được theo định mức thì nhập tay ở cuối trang.</p>
+  <p class="sub">Chọn hạng mục theo danh mục định mức, nhập khối lượng và tháng thi công; hệ thống tính số máy theo 4 kiểu định mức (bảng cuối trang). Hạng mục đơn vị căn/m² kiểu "đơn vị/bộ máy" tính trên toàn bộ khối lượng đang thi công trong mỗi tháng. Máy đặc thù không có định mức thì nhập tay.</p>
   <div class="panel">
     <div class="row" style="margin-bottom:8px"><b>Hạng mục và khối lượng</b><label class="sm right" for="hsca">Hệ số ca</label>
       <select id="hsca" ${canEditBan() ? "" : "disabled"}>${[1, 1.5, 2].map(v => `<option ${v === +banRow.he_so_ca ? "selected" : ""}>${v}</option>`).join("")}</select></div>
-    <div class="scroll"><table><thead><tr><th>Hạng mục</th><th class="num">Khối lượng</th><th>Đơn vị</th><th>Từ tháng</th><th>Đến tháng</th><th></th></tr></thead><tbody>
+    <div class="scroll"><table><thead><tr><th>Hạng mục</th><th class="num">Khối lượng</th><th>Đơn vị</th><th>Từ tháng</th><th>Đến tháng</th><th>Loại máy chọn (khi có máy thay thế)</th><th></th></tr></thead><tbody>
     ${cv.map(c => `<tr><td>${esc(hmMap[c.hang_muc_id]?.ten)}</td><td class="num">${edit ? `<input id="kl-${c.id}" class="kl" data-id="${c.id}" type="number" min="0" value="${c.khoi_luong}" style="width:130px;text-align:right">` : fmt(c.khoi_luong)}</td><td>${esc(hmMap[c.hang_muc_id]?.don_vi)}</td>
       <td>${edit ? `<select class="tu" id="tu-${c.id}" data-id="${c.id}">${opt(c.tu_thang)}</select>` : vnDate(c.tu_thang).slice(3)}</td><td>${edit ? `<select class="den" id="den-${c.id}" data-id="${c.id}">${opt(c.den_thang)}</select>` : vnDate(c.den_thang).slice(3)}</td>
-      <td>${edit ? `<button class="ghost" data-del="${c.id}">Xóa</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">Chưa có hạng mục.</td></tr>`}
+      <td>${chonSel(c)}</td><td>${edit ? `<button class="ghost" data-del="${c.id}">Xóa</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="7" class="muted">Chưa có hạng mục.</td></tr>`}
     </tbody></table></div>
-    ${edit ? `<div class="row" style="margin-top:10px"><select id="newhm" aria-label="Hạng mục">${hm.map(h => `<option value="${h.id}">${esc(h.ten)}</option>`).join("")}</select><input id="newkl" type="number" min="0" placeholder="Khối lượng" style="width:140px">
+    ${edit ? `<div class="row" style="margin-top:10px"><select id="newhm" aria-label="Hạng mục">${hm.map(h => `<option value="${h.id}">${esc((h.nhom ? h.nhom + " · " : "") + h.ten)} (${esc(h.don_vi)})</option>`).join("")}</select><input id="newkl" type="number" min="0" placeholder="Khối lượng" style="width:140px">
       <select id="newtu" aria-label="Từ tháng">${opt(M[0].iso)}</select><select id="newden" aria-label="Đến tháng">${opt(M[3].iso)}</select><button id="add">Thêm hạng mục</button></div>` : ""}
   </div>
   <div class="panel scroll"><table><thead><tr><th>Loại máy</th>${M.map(m => `<th class="num">${m.lab}</th>`).join("")}<th class="num">Đang có ở ban</th><th class="num">Thiếu lúc cao điểm</th></tr></thead><tbody>
@@ -194,12 +200,17 @@ async function vTienDo() {
     ${ntay.map(r => `<tr><td>${esc(loaiTen(r.loai_id))}</td><td>${vnDate(r.thang).slice(3)}</td><td class="num">${fmt(r.so_may)}</td><td>${edit ? `<button class="ghost" data-ntdel="${r.loai_id}|${r.thang}">Xóa</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">Không có.</td></tr>`}
   </tbody></table>
   ${edit ? `<div class="row" style="margin-top:10px"><select id="ntloai" aria-label="Loại máy">${S.loai.map(l => `<option value="${l.id}">${esc(l.ten_chuan)}</option>`).join("")}</select><select id="ntthang" aria-label="Tháng">${opt(M[0].iso)}</select><input id="ntso" type="number" min="0" step="1" placeholder="Số máy" style="width:100px"><button id="ntadd">Thêm</button></div>` : ""}</div>
-  <h2>Định mức năng suất và lái máy</h2>
-  <p class="sub">${isQltb() ? "Bạn là P.QLTB: sửa năng suất/lái máy rồi bấm ra ngoài ô để lưu; mọi ban tính lại ngay." : "Chỉ P.QLTB sửa được định mức."}</p>
-  <div class="panel scroll"><table><thead><tr><th>Hạng mục</th><th>Loại máy</th><th class="num">Năng suất/máy/ca</th><th>Đơn vị</th><th class="num">Lái máy/máy/ca</th></tr></thead><tbody>
-  ${dm.map(d => `<tr><td>${esc(hmMap[d.hang_muc_id]?.ten)}</td><td>${esc(loaiTen(d.loai_id))}</td>
-    <td class="num">${isQltb() ? `<input class="dm" id="ns-${d.hang_muc_id}-${d.loai_id}" data-h="${d.hang_muc_id}" data-l="${d.loai_id}" data-f="nang_suat_ca" type="number" min="0.01" step="any" value="${d.nang_suat_ca}" style="width:100px;text-align:right">` : fmt(d.nang_suat_ca)}</td>
-    <td>${esc(hmMap[d.hang_muc_id]?.don_vi)}</td><td class="num">${isQltb() ? `<input class="dm" id="lai-${d.hang_muc_id}-${d.loai_id}" data-h="${d.hang_muc_id}" data-l="${d.loai_id}" data-f="lai_may_ca" type="number" min="0" step="0.5" value="${d.lai_may_ca}" style="width:70px;text-align:right">` : d.lai_may_ca}</td></tr>`).join("")}
+  <h2>Định mức</h2>
+  <p class="sub">Bốn kiểu định mức: năng suất/ca (số máy = KL tháng ÷ (định mức × ca/tháng × hệ số ca)); ca máy/đơn vị (= KL tháng × định mức ÷ (ca/tháng × hệ số ca)); đơn vị/bộ máy (= KL đang thi công ÷ định mức × số máy trong bộ); đi kèm máy khác (= số máy nguồn × tỷ lệ). ${isQltb() ? "Bạn là P.QLTB: sửa định mức, lái máy rồi bấm ra ngoài ô để lưu." : "Chỉ P.QLTB sửa được định mức."}</p>
+  <div class="panel scroll"><table><thead><tr><th>Hạng mục</th><th>Loại máy</th><th>Kiểu</th><th class="num">Định mức</th><th>Đơn vị gốc</th><th class="num">Máy/bộ</th><th>Nhóm thay thế</th><th class="num">Lái máy/ca</th><th>PD</th></tr></thead><tbody>
+  ${dm.map(d => `<tr><td>${esc(hmMap[d.hang_muc_id]?.ten)}</td><td>${esc(loaiTen(d.loai_id))}</td><td class="muted">${KIEU[d.kieu]}</td>
+    <td class="num">${isQltb() ? `<input class="dm" id="gt-${d.hang_muc_id}-${d.loai_id}" data-h="${d.hang_muc_id}" data-l="${d.loai_id}" data-f="gia_tri" type="number" min="0.0001" step="any" value="${d.gia_tri}" style="width:90px;text-align:right">` : fmt(d.gia_tri)}</td>
+    <td class="muted">${esc(d.don_vi_goc || "")}</td><td class="num">${fmt(d.so_may_trong_bo)}</td><td>${d.nhom_thay_the ? esc(d.nhom_thay_the) + (d.mac_dinh ? " · <b>mặc định</b>" : "") : "–"}</td>
+    <td class="num">${isQltb() ? `<input class="dm" id="lai-${d.hang_muc_id}-${d.loai_id}" data-h="${d.hang_muc_id}" data-l="${d.loai_id}" data-f="lai_may_ca" type="number" min="0" step="0.5" value="${d.lai_may_ca}" style="width:64px;text-align:right">` : d.lai_may_ca}</td>
+    <td>${d.da_phe_duyet ? `<span class="pill s-lam">Đã PD</span>` : `<span class="pill s-sua">Chưa PD</span>`}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="panel scroll"><b>Máy đi kèm máy khác</b><table style="margin-top:6px"><thead><tr><th>Máy đi kèm</th><th>Theo máy</th><th class="num">Tỷ lệ</th><th>Đơn vị gốc</th><th>PD</th></tr></thead><tbody>
+  ${tm.map(t => `<tr><td>${esc(loaiTen(t.loai_id))}</td><td>${esc(loaiTen(t.loai_nguon_id))}</td><td class="num">${t.ty_le}</td><td class="muted">${esc(t.don_vi_goc || "")}</td><td>${t.da_phe_duyet ? `<span class="pill s-lam">Đã PD</span>` : `<span class="pill s-sua">Chưa PD</span>`}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">Không có.</td></tr>`}
   </tbody></table></div>`;
   const reload = () => vTienDo().catch(fail);
   const upd = async (id, patch) => { try { await q(sb.from("cong_viec").update(patch).eq("id", id)); reload(); } catch (e) { fail(e); } };
@@ -215,6 +226,8 @@ async function vTienDo() {
     try { await q(sb.from("nhu_cau_nhap_tay").upsert({ ban_id: b, loai_id: +$("#ntloai").value, thang: $("#ntthang").value, so_may: so })); reload(); } catch (e) { fail(e); } };
   document.querySelectorAll("[data-ntdel]").forEach(x => x.onclick = async () => { const [l, t] = x.dataset.ntdel.split("|");
     try { await q(sb.from("nhu_cau_nhap_tay").delete().eq("ban_id", b).eq("loai_id", +l).eq("thang", t)); reload(); } catch (e) { fail(e); } });
+  document.querySelectorAll(".chon").forEach(x => x.onchange = async () => {
+    try { await q(sb.from("cong_viec_chon").upsert({ cong_viec_id: +x.dataset.cv, nhom_thay_the: x.dataset.g, loai_id: +x.value })); toast("Đã đổi loại máy"); reload(); } catch (e) { fail(e); } });
   document.querySelectorAll(".dm").forEach(x => x.onchange = async () => {
     try { await q(sb.from("dinh_muc").update({ [x.dataset.f]: +x.value }).eq("hang_muc_id", +x.dataset.h).eq("loai_id", +x.dataset.l)); toast("Đã lưu định mức"); reload(); } catch (e) { fail(e); } });
 }
