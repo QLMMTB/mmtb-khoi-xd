@@ -48,7 +48,7 @@ window.vNhapDuLieu = async function () {
         <div class="tile ${loaiMoi.length ? "warn" : ""}"><div class="k">Loại máy chưa có trong danh mục</div><div class="v">${loaiMoi.length}</div><div class="d">sẽ thêm mới, P.QLTB rà lại sau</div></div></div>
         <div class="panel row"><button class="primary" id="go">Nạp ${fmt(data.length)} máy vào hệ thống</button><span id="pg" class="muted"></span></div>`;
       $("#go").onclick = async () => {
-        $("#go").disabled = true; const pg = t => $("#pg").textContent = t;
+        $("#go").disabled = true; window.onbeforeunload = () => "Đang nạp dữ liệu"; const pg = t => $("#pg").textContent = t;
         try {
           pg("Đang nạp khối và ban…");
           const khoi = [...new Set(data.map(r => norm(r[iK])).filter(Boolean))];
@@ -79,8 +79,8 @@ window.vNhapDuLieu = async function () {
           S.bans = await q(sb.from("ban").select("*").order("ten")); S.banMap = Object.fromEntries(S.bans.map(b => [b.id, b]));
           $("#ban").innerHTML = S.bans.map(b => `<option value="${esc(b.id)}" ${b.id === S.viewBan ? "selected" : ""}>${esc(b.ten)}</option>`).join("");
           pg(`Xong: thêm ${fmt(moi.length)} máy mới, cập nhật hồ sơ ${fmt(cu.length)} máy, ${banNew.length} ban mới, ${loaiMoi.length} loại máy mới.`);
-          toast("Đã nạp dữ liệu");
-        } catch (e) { fail(e); $("#go").disabled = false; pg("Lỗi – xem thông báo, sửa rồi bấm lại (máy đã nạp không bị nạp trùng)."); }
+          toast("Đã nạp dữ liệu"); window.onbeforeunload = null;
+        } catch (e) { window.onbeforeunload = null; fail(e); $("#go").disabled = false; pg("Lỗi – xem thông báo, sửa rồi bấm lại (máy đã nạp không bị nạp trùng)."); }
       };
     } catch (e) { $("#st").textContent = ""; fail(e); }
   };
