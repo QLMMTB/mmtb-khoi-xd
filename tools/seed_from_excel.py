@@ -94,13 +94,16 @@ for k, (raw, cn) in alias.items():
     L.append(f"insert into ten_ghep(ten_cu_norm, ten_cu, loai_id, nguon) select {q(k)}, {q(raw)}, id, 'REV2/Danh sách máy' "
              f"from loai_may where lower(ten_chuan) = {q(cn)} on conflict do nothing;")
 n_tt = {}
+vals = []
 for _, r in d.iterrows():
     st = TT.get(str(r[stcol]).strip(), 'lam_viec') if stcol is not None else 'lam_viec'
     n_tt[st] = n_tt.get(st, 0) + 1
-    L.append("insert into may(ma, loai_id, ten_loai_goc, so_huu, chu_tai_san, don_vi_su_dung, so_khung, so_may, bien_so, ma_sap, ban_id, trang_thai) "
-             f"values ({q(r['Mã máy móc'])}, tim_loai({q(chuan(r['Tên loại máy móc']))}), {q(r['Tên loại máy móc'])}, "
+    vals.append(f"({q(r['Mã máy móc'])}, tim_loai({q(chuan(r['Tên loại máy móc']))}), {q(r['Tên loại máy móc'])}, "
              f"{q('CSH' if r['CSH'] == 'Máy CSH hiện có' else 'Thue')}, {q(r['Chủ tài sản'])}, {q(r['Đơn vị sử dụng'])}, "
-             f"{q(r.get('Số Khung'))}, {q(r.get('Số máy'))}, {q(r.get('Biển số'))}, {q(r.get('Mã TS SAP'))}, {q(ban_id[r['Dự án']])}, '{st}') on conflict (ma) do nothing;")
+             f"{q(r.get('Số Khung'))}, {q(r.get('Số máy'))}, {q(r.get('Biển số'))}, {q(r.get('Mã TS SAP'))}, {q(ban_id[r['Dự án']])}, '{st}')")
+for i in range(0, len(vals), 500):
+    L.append("insert into may(ma, loai_id, ten_loai_goc, so_huu, chu_tai_san, don_vi_su_dung, so_khung, so_may, bien_so, ma_sap, ban_id, trang_thai) values\n"
+             + ",\n".join(vals[i:i + 500]) + "\non conflict (ma) do nothing;")
 # Định mức MẪU (giống bản mẫu) – thay bằng định mức chính thức
 DM = {'Đào đất': ('m3', [('Máy xúc bánh xích 200', 400, 1), ('Xe ben 16 tấn VC04', 100, 1)]),
       'Đắp và lu lèn nền': ('m3', [('Máy ủi D5', 800, 1), ('Máy lu rung bánh lốp 12-14 tấn', 700, 1), ('Xe nước 9m3', 1400, 1)]),
