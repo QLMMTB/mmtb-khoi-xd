@@ -38,7 +38,7 @@ const loaiTen = id => S.loaiMap[id]?.ten_chuan || id;
 
 const TABS = [["tongquan", "Tổng quan"], ["capnhat", "Cập nhật hằng ngày"], ["tiendo", "Nhu cầu theo tiến độ"], ["laimay", "Lái máy (LXLM)"],
   ["ton", "Máy tồn toàn Khối"], ["hong", "Báo hỏng"], ["dieuchuyen", "Điều chuyển & phê duyệt"], ["danhmuc", "Danh mục chuẩn hóa"]];
-let tab = (location.hash.slice(1) && TABS.some(t => t[0] === location.hash.slice(1))) ? location.hash.slice(1) : "tongquan";
+let tab = location.hash.slice(1) || "tongquan";
 
 async function boot() {
   const { data: { session } } = await sb.auth.getSession();
@@ -63,15 +63,19 @@ $("#login").onsubmit = async e => {
 };
 $("#logout").onclick = logout;
 $("#ban").onchange = () => { S.viewBan = $("#ban").value; render(); };
-window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (TABS.some(t => t[0] === h)) { tab = h; render(); } });
+window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (S.me && tabsFor().some(t => t[0] === h)) { tab = h; render(); } });
 
+function tabsFor() { return ["qltb", "admin"].includes(S.me?.vai_tro) ? [...TABS, ["nhapdulieu", "Nhập dữ liệu"]] : TABS; }
 function renderTabs() {
-  $("#tabs").innerHTML = TABS.map(([k, t]) => `<button class="tab" role="tab" aria-selected="${k === tab}" data-k="${k}">${t}</button>`).join("");
+  $("#tabs").innerHTML = tabsFor().map(([k, t]) => `<button class="tab" role="tab" aria-selected="${k === tab}" data-k="${k}">${t}</button>`).join("");
   $("#tabs").querySelectorAll(".tab").forEach(b => b.onclick = () => { tab = b.dataset.k; location.hash = tab; render(); });
 }
 async function render() {
+  if (!tabsFor().some(t => t[0] === tab)) tab = "tongquan";
   renderTabs(); $("#view").innerHTML = `<div class="loading">Đang tải…</div>`;
-  try { await ({ tongquan: vTongQuan, capnhat: vCapNhat, tiendo: vTienDo, laimay: vLaiMay, ton: vTon, hong: vHong, dieuchuyen: vDC, danhmuc: vDM })[tab](); }
+  if (!S.viewBan && ["capnhat", "tiendo", "laimay", "hong"].includes(tab)) {
+    $("#view").innerHTML = `<p class="sub">Chưa có ban nào trong hệ thống. ${["qltb", "admin"].includes(S.me.vai_tro) ? "Vào tab Nhập dữ liệu để nạp file Danh sách máy." : "Liên hệ P.QLTB."}</p>`; return; }
+  try { await ({ tongquan: vTongQuan, capnhat: vCapNhat, tiendo: vTienDo, laimay: vLaiMay, ton: vTon, hong: vHong, dieuchuyen: vDC, danhmuc: vDM, nhapdulieu: window.vNhapDuLieu })[tab](); }
   catch (e) { fail(e); $("#view").innerHTML = `<p class="err">Không tải được dữ liệu: ${esc(e.message || e)}</p>`; }
 }
 
