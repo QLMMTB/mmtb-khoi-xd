@@ -24,8 +24,13 @@ function toast(t, bad) { const el = $("#toast"); el.textContent = t; el.style.ba
 function fail(e) { console.error(e); toast(e?.message || String(e), true); }
 async function q(p) { const { data, error } = await p; if (error) throw error; return data; }
 async function all(table, select, build = x => x) {           // đọc hết (vượt giới hạn 1000 dòng/lần)
+  // Luôn sắp thêm theo khóa duy nhất của bảng, nếu không các trang 1.000 dòng có thể trùng hoặc sót dòng
+  const KEYS = { may: ["ma"], loai_may: ["id"], ten_ghep: ["ten_cu_norm"], v_nguon_cung: ["ban_id", "loai_id"],
+    v_nhu_cau: ["ban_id", "loai_id", "thang"] };
+  const keys = KEYS[table] || [];
   let out = [], from = 0; const step = 1000;
-  for (;;) { const rows = await q(build(sb.from(table).select(select)).range(from, from + step - 1)); out = out.concat(rows); if (rows.length < step) return out; from += step; }
+  for (;;) { let qq = build(sb.from(table).select(select)); keys.forEach(k => qq = qq.order(k));
+    const rows = await q(qq.range(from, from + step - 1)); out = out.concat(rows); if (rows.length < step) return out; from += step; }
 }
 async function rpc(fn, args) { const { data, error } = await sb.rpc(fn, args); if (error) throw error; return data; }
 
