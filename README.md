@@ -3,6 +3,8 @@
 Ứng dụng web cho 60–100 BQLXD cập nhật máy hằng ngày, lập nhu cầu MMTB theo tiến độ – khối lượng – định mức,
 tính lái máy (LXLM), quản lý máy tồn, báo hỏng, điều chuyển nhiều cấp duyệt.
 
+**Trang chạy thử:** https://qlmmtb.github.io/mmtb-khoi-xd/ (GitHub Pages của tổ chức QLMMTB, tự triển khai khi thư mục `web/` thay đổi).
+
 - `web/` – trang web tĩnh (HTML/JS thuần, thư viện Supabase tải từ CDN). Đưa lên Cloudflare Pages, thư mục xuất bản = `web`.
 - `supabase/migrations/` – cơ sở dữ liệu: bảng, hàm nghiệp vụ, phân quyền (RLS). Chạy theo thứ tự 0001 → 0003.
 - `supabase/tao_nguoi_dung.sql` – gán vai trò cho tài khoản.
