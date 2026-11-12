@@ -571,3 +571,7 @@ drop policy if exists doc_nguoi_dung on nguoi_dung;
 create policy doc_nguoi_dung on nguoi_dung for select to authenticated using (id = auth.uid() or da_cap_quyen());
 
 -- Các hàm nghiệp vụ đã tự kiểm tra vai trò; bổ sung chặn tài khoản chưa cấp quyền ở hàm xác nhận ngày (đã có kiểm tra vai trò).
+
+-- ===== 0006_nhu_cau_tu_file_th.sql =====
+alter table nhu_cau_nhap_tay add column if not exists nguon text not null default 'nhap_tay';
+comment on column nhu_cau_nhap_tay.nguon is 'nhap_tay = BQLXD/P.QLTB nhập trên phần mềm; TH MMTB = nạp từ file TH MMTB theo tiến độ';

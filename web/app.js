@@ -186,6 +186,7 @@ async function vTienDo() {
   const co = Object.fromEntries(cung.map(r => [r.loai_id, r.csh + r.thue]));
   const opt = (sel) => M.map((m, i) => `<option value="${m.iso}" ${m.iso === sel ? "selected" : ""}>${m.lab}</option>`).join("");
   const banRow = S.banMap[b];
+  const ntayTH = ntay.filter(r => r.nguon === "TH MMTB"), ntayTay = ntay.filter(r => r.nguon !== "TH MMTB");
   $("#view").innerHTML = `
   <h2>Nhu cầu MMTB theo tiến độ – ${esc(banTen(b))}</h2>
   <p class="sub">Chọn hạng mục theo danh mục định mức, nhập khối lượng và tháng thi công; hệ thống tính số máy theo 4 kiểu định mức (bảng cuối trang). Hạng mục đơn vị căn/m² kiểu "đơn vị/bộ máy" tính trên toàn bộ khối lượng đang thi công trong mỗi tháng. Máy đặc thù không có định mức thì nhập tay.</p>
@@ -205,8 +206,9 @@ async function vTienDo() {
       return `<tr><td>${esc(loaiTen(+l))}</td>${arr.map(v => `<td class="num ${v > c ? "" : "muted"}">${v ? fmt(v) : "–"}</td>`).join("")}<td class="num">${c}</td><td class="num">${th > 0 ? `<span class="pill s-hong">${th}</span>` : `<span class="pill s-lam">đủ</span>`}</td></tr>`; }).join("") || `<tr><td colspan="${M.length + 3}" class="muted">Chưa có nhu cầu.</td></tr>`}
   </tbody></table></div>
   <h2>Nhu cầu nhập tay (máy đặc thù)</h2>
+  ${ntayTH.length ? `<p class="sub">Có ${fmt(ntayTH.length)} dòng nhu cầu (${new Set(ntayTH.map(r => r.loai_id)).size} loại máy, ${vnDate(ntayTH.reduce((a, r) => r.thang < a ? r.thang : a, ntayTH[0].thang)).slice(3)} – ${vnDate(ntayTH.reduce((a, r) => r.thang > a ? r.thang : a, ntayTH[0].thang)).slice(3)}) do P.QLTB nạp từ file TH MMTB theo tiến độ, đã cộng vào bảng nhu cầu ở trên.</p>` : ""}
   <div class="panel scroll"><table><thead><tr><th>Loại máy</th><th>Tháng</th><th class="num">Số máy</th><th></th></tr></thead><tbody>
-    ${ntay.map(r => `<tr><td>${esc(loaiTen(r.loai_id))}</td><td>${vnDate(r.thang).slice(3)}</td><td class="num">${fmt(r.so_may)}</td><td>${edit ? `<button class="ghost" data-ntdel="${r.loai_id}|${r.thang}">Xóa</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">Không có.</td></tr>`}
+    ${ntayTay.map(r => `<tr><td>${esc(loaiTen(r.loai_id))}</td><td>${vnDate(r.thang).slice(3)}</td><td class="num">${fmt(r.so_may)}</td><td>${edit ? `<button class="ghost" data-ntdel="${r.loai_id}|${r.thang}">Xóa</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">Không có.</td></tr>`}
   </tbody></table>
   ${edit ? `<div class="row" style="margin-top:10px"><select id="ntloai" aria-label="Loại máy">${S.loai.map(l => `<option value="${l.id}">${esc(l.ten_chuan)}</option>`).join("")}</select><select id="ntthang" aria-label="Tháng">${opt(M[0].iso)}</select><input id="ntso" type="number" min="0" step="1" placeholder="Số máy" style="width:100px"><button id="ntadd">Thêm</button></div>` : ""}</div>
   <h2>Định mức</h2>
@@ -232,7 +234,7 @@ async function vTienDo() {
     try { await q(sb.from("cong_viec").insert({ ban_id: b, hang_muc_id: +$("#newhm").value, khoi_luong: kl, tu_thang: tu, den_thang: den })); toast("Đã thêm hạng mục"); reload(); } catch (e) { fail(e); } };
   if ($("#hsca") && canEditBan()) $("#hsca").onchange = async () => { try { await rpc("dat_he_so_ca", { p_he_so: +$("#hsca").value }); S.banMap[b].he_so_ca = +$("#hsca").value; reload(); } catch (e) { fail(e); } };
   if ($("#ntadd")) $("#ntadd").onclick = async () => { const so = +$("#ntso").value; if (!(so >= 0) || $("#ntso").value === "") return toast("Nhập số máy", true);
-    try { await q(sb.from("nhu_cau_nhap_tay").upsert({ ban_id: b, loai_id: +$("#ntloai").value, thang: $("#ntthang").value, so_may: so })); reload(); } catch (e) { fail(e); } };
+    try { await q(sb.from("nhu_cau_nhap_tay").upsert({ ban_id: b, loai_id: +$("#ntloai").value, thang: $("#ntthang").value, so_may: so, nguon: "nhap_tay" })); reload(); } catch (e) { fail(e); } };
   document.querySelectorAll("[data-ntdel]").forEach(x => x.onclick = async () => { const [l, t] = x.dataset.ntdel.split("|");
     try { await q(sb.from("nhu_cau_nhap_tay").delete().eq("ban_id", b).eq("loai_id", +l).eq("thang", t)); reload(); } catch (e) { fail(e); } });
   document.querySelectorAll(".chon").forEach(x => x.onchange = async () => {

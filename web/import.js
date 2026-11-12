@@ -18,8 +18,9 @@ window.vNhapDuLieu = async function () {
   <h2>Nhập dữ liệu từ file Danh sách máy</h2>
   <p class="sub">Chọn file Excel báo cáo MMTB (có sheet "Danh sách máy"). Phần mềm chỉ lấy máy của VHM, Vinalpha, Vinalpha WDS, Vincons; ban = cột "Dự án". Máy mới được thêm; máy đã có chỉ cập nhật hồ sơ (biển số, số khung, chủ tài sản…), không đổi ban đang giữ và trạng thái.</p>
   ${isAdmin ? `<div class="panel row"><input type="file" id="file" accept=".xlsx,.xlsm,.xls"><span id="st" class="muted"></span></div>
-  <div id="pv"></div>` : `<p class="err">Chỉ P.QLTB hoặc quản trị được nhập dữ liệu.</p>`}`;
+  <div id="pv"></div><section id="thsec"></section>` : `<p class="err">Chỉ P.QLTB hoặc quản trị được nhập dữ liệu.</p>`}`;
   if (!isAdmin) return;
+  if (window.MMTB_TH) window.MMTB_TH.mount($("#thsec"));
   const loadXlsx = () => window.XLSX ? Promise.resolve() : new Promise((ok, no) => { const s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = ok; s.onerror = () => no(new Error("Không tải được thư viện đọc Excel")); document.head.appendChild(s); });
   $("#file").onchange = async () => {
